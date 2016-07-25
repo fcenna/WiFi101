@@ -40,8 +40,6 @@
  */
 #include "common/include/nm_common.h"
 
-#ifdef CONF_WINC_USE_SPI
-
 #define USE_OLD_SPI_SW
 
 #include "bus_wrapper/include/nm_bus_wrapper.h"
@@ -158,6 +156,7 @@ static const uint8 crc7_syndrome_table[256] = {
 	0x46, 0x4f, 0x54, 0x5d, 0x62, 0x6b, 0x70, 0x79
 };
 
+
 static uint8 crc7_byte(uint8 crc, uint8 data)
 {
 #if (defined ARDUINO_ARCH_AVR)
@@ -179,6 +178,25 @@ static uint8 crc7(uint8 crc, const uint8 *buffer, uint32 len)
 	Spi protocol Function
 
 ********************************************/
+
+#define CMD_DMA_WRITE			0xc1
+#define CMD_DMA_READ			0xc2
+#define CMD_INTERNAL_WRITE		0xc3
+#define CMD_INTERNAL_READ		0xc4
+#define CMD_TERMINATE			0xc5
+#define CMD_REPEAT				0xc6
+#define CMD_DMA_EXT_WRITE		0xc7
+#define CMD_DMA_EXT_READ		0xc8
+#define CMD_SINGLE_WRITE		0xc9
+#define CMD_SINGLE_READ			0xca
+#define CMD_RESET				0xcf
+
+#define DATA_PKT_SZ_256 		256
+#define DATA_PKT_SZ_512			512
+#define DATA_PKT_SZ_1K			1024
+#define DATA_PKT_SZ_4K			(4 * 1024)
+#define DATA_PKT_SZ_8K			(8 * 1024)
+#define DATA_PKT_SZ				DATA_PKT_SZ_8K
 
 static sint8 spi_cmd(uint8 cmd, uint32 adr, uint32 u32data, uint32 sz,uint8 clockless)
 {
@@ -751,12 +769,12 @@ sint8 nm_spi_init(void)
 
 /*
 *	@fn		nm_spi_init
-*	@brief	DeInitialize the SPI
+*	@brief	DeInitialize the SPI 
 *	@return	M2M_SUCCESS in case of success and M2M_ERR_BUS_FAIL in case of failure
 *	@author	Samer Sarhan
 *	@date	27 Feb 2015
 *	@version	1.0
-*/
+*/ 
 sint8 nm_spi_deinit(void)
 {
 	gu8Crc_off = 0;
@@ -882,4 +900,3 @@ sint8 nm_spi_write_block(uint32 u32Addr, uint8 *puBuf, uint16 u16Sz)
 	return s8Ret;
 }
 
-#endif

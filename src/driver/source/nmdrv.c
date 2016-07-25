@@ -46,10 +46,8 @@
 #include "driver/source/nmasic.h"
 #include "driver/include/m2m_types.h"
 #include "spi_flash/include/spi_flash.h"
-
-#ifdef CONF_WINC_USE_SPI
 #include "driver/source/nmspi.h"
-#endif
+
 
 /**
 *	@fn		nm_get_firmware_info(tstrM2mRev* M2mRev)
@@ -247,12 +245,8 @@ sint8 nm_drv_init_download_mode()
 	*/
 	chip_reset_and_cpu_halt();
 
-
-
-#ifdef CONF_WINC_USE_SPI
 	/* Must do this after global reset to set SPI data packet size. */
 	nm_spi_init();
-#endif
 
 	M2M_INFO("Chip ID %lx\n", nmi_get_chipid());
 
@@ -314,10 +308,8 @@ sint8 nm_drv_init(void * arg)
 	}
 #endif
 	M2M_INFO("Chip ID %lx\n", nmi_get_chipid());
-#ifdef CONF_WINC_USE_SPI
 	/* Must do this after global reset to set SPI data packet size. */
 	nm_spi_init();
-#endif
 #ifdef NO_HW_CHIP_EN
 	/*return power save to default value*/
 	chip_idle();
@@ -365,8 +357,6 @@ ERR1:
 */
 sint8 nm_drv_deinit(void * arg)
 {
-	(void)arg; // Silence "unused" warning
-
 	sint8 ret;
 
 	ret = chip_deinit();
@@ -387,10 +377,8 @@ sint8 nm_drv_deinit(void * arg)
 		M2M_ERR("[nmi stop]: fail init bus\n");
 		goto ERR1;
 	}
-#ifdef CONF_WINC_USE_SPI
 	/* Must do this after global reset to set SPI data packet size. */
 	nm_spi_deinit();
-#endif
 
 ERR1:
 	return ret;

@@ -56,7 +56,7 @@
 #else
 #define TIMEOUT						(0xfffffffful)
 #endif 
-#define M2M_DISABLE_PS				(0xd0ul)
+#define M2M_DISABLE_PS				 0xD0UL
 
 static uint32 clk_status_reg_adr = 0xf; /* Assume initially it is B0 chip */
 
@@ -98,7 +98,6 @@ sint8 chip_apply_conf(uint32 u32Conf)
 
 	return M2M_SUCCESS;
 }
-
 /**
 *	@fn		nm_clkless_wake
 *	@brief	Wakeup the chip using clockless registers
@@ -279,9 +278,8 @@ uint32 nmi_get_chipid(void)
 	static uint32 chipid = 0;
 
 	if (chipid == 0) {
-		//uint32 revid;
 		uint32 rfrevid;
-
+		
 		if((nm_read_reg_with_ret(0x1000, &chipid)) != M2M_SUCCESS) {
 			chipid = 0;
 			return 0;
@@ -306,12 +304,12 @@ uint32 nmi_get_chipid(void)
 			} else /* if(rfrevid == 5) */ { /* 1002B2 */
 				chipid = 0x1002b2;
 			}
-		} else if(chipid == 0x1000F0) { 
+		}else if(chipid == 0x1000F0) { 
 			if((nm_read_reg_with_ret(0x3B0000, &chipid)) != M2M_SUCCESS) {
 			chipid = 0;
 			return 0;
 			}
-		} else {
+		}else {
 			
 		}
 //#define PROBE_FLASH
@@ -592,6 +590,8 @@ sint8 chip_deinit(void)
 	return ret;
 }
 
+#ifdef CONF_PERIPH
+
 sint8 set_gpio_dir(uint8 gpio, uint8 dir)
 {
 	uint32 val32;
@@ -667,6 +667,7 @@ sint8 pullup_ctrl(uint32 pinmask, uint8 enable)
 _EXIT:
 	return s8Ret;
 }
+#endif /* CONF_PERIPH */
 
 sint8 nmi_get_otp_mac_address(uint8 *pu8MacAddr,  uint8 * pu8IsValid)
 {
@@ -721,7 +722,6 @@ sint8 nmi_get_mac_address(uint8 *pu8MacAddr)
 
 	ret = nm_read_reg_with_ret(rNMI_GP_REG_2, &u32RegValue);
 	if(ret != M2M_SUCCESS) goto _EXIT_ERR;
-
 #ifdef ARDUINO
 	if (u32RegValue) {
 		ret = nm_read_block(u32RegValue|0x30000,(uint8*)&strgp,sizeof(tstrGpRegs));

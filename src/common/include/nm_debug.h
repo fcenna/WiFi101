@@ -43,7 +43,9 @@
 #define _NM_DEBUG_H_
 
 #include "bsp/include/nm_bsp.h"
+#ifdef ARDUINO
 #include "bsp/include/nm_bsp_internal.h"
+#endif
 
 /**@defgroup  DebugDefines DebugDefines
  * @ingroup WlanDefines

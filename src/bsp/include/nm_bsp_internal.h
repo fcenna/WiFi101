@@ -52,4 +52,6 @@
 #include "bsp/include/nm_bsp_samd21.h"
 #endif
 
+#define CONF_PERIPH
+
 #endif //_NM_BSP_INTERNAL_H_

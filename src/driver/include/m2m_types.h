@@ -118,7 +118,7 @@ MACROS
 /*!< Firmware Minor release version number.
 */
 
-#define M2M_FIRMWARE_VERSION_PATCH_NO					(4)
+#define M2M_FIRMWARE_VERSION_PATCH_NO					(3)
 /*!< Firmware patch release version number.
 */
 
@@ -131,11 +131,11 @@ MACROS
 */
 
 
-#define M2M_DRIVER_VERSION_MINOR_NO						(3)
+#define M2M_DRIVER_VERSION_MINOR_NO						(4)
 /*!< Driver Minor release version number.
 */
 
-#define M2M_DRIVER_VERSION_PATCH_NO						(0)
+#define M2M_DRIVER_VERSION_PATCH_NO						(3)
 /*!< Driver patch release version number.
 */
 
@@ -1865,6 +1865,7 @@ typedef struct{
 	*/
 
 }tstrOtaInitHdr;
+	
 
 /*!
 @struct	\

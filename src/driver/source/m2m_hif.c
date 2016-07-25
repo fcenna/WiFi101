@@ -128,10 +128,8 @@ ERR1:
 */
 static void m2m_hif_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
 {
-	// Silence "unused" warning
-	(void)u8OpCode;
-	(void)u16DataSize;
-	(void)u32Addr;
+
+
 }
 /**
 *	@fn		NMI_API sint8 hif_chip_wake(void);
@@ -206,7 +204,7 @@ sint8 hif_chip_sleep(void)
 	{
 		gu8ChipSleep--;
 	}
-
+	
 	if(gu8ChipSleep == 0)
 	{
 		if((gu8ChipMode == M2M_PS_DEEP_AUTOMATIC)||(gu8ChipMode == M2M_PS_MANUAL))
@@ -240,8 +238,6 @@ ERR1:
 
 sint8 hif_init(void * arg)
 {
-	(void)arg; // Silence "unused" warning
-
 	pfWifiCb = NULL;
 	pfIpCb = NULL;
 
@@ -264,8 +260,6 @@ sint8 hif_init(void * arg)
 */
 sint8 hif_deinit(void * arg)
 {
-	(void)arg; // Silence "unused" warning
-
 	sint8 ret = M2M_SUCCESS;
 #if 0
 	uint32 reg = 0, cnt=0;
@@ -291,7 +285,6 @@ sint8 hif_deinit(void * arg)
 	pfIpCb  = NULL;
 	pfOtaCb = NULL;
 	pfHifCb = NULL;
-
 
 	return ret;
 }
@@ -379,17 +372,11 @@ sint8 hif_send(uint8 u8Gid,uint8 u8Opcode,uint8 *pu8CtrlBuf,uint16 u16CtrlBufSiz
 			u32CurrAddr = dma_addr;
 			strHif.u16Length=NM_BSP_B_L_16(strHif.u16Length);
 			ret = nm_write_block(u32CurrAddr, (uint8*)&strHif, M2M_HIF_HDR_OFFSET);
-		#ifdef CONF_WINC_USE_I2C
-			nm_bsp_sleep(1);
-		#endif
 			if(M2M_SUCCESS != ret) goto ERR1;
 			u32CurrAddr += M2M_HIF_HDR_OFFSET;
 			if(pu8CtrlBuf != NULL)
 			{
 				ret = nm_write_block(u32CurrAddr, pu8CtrlBuf, u16CtrlBufSize);
-			#ifdef CONF_WINC_USE_I2C
-				nm_bsp_sleep(1);
-			#endif
 				if(M2M_SUCCESS != ret) goto ERR1;
 				u32CurrAddr += u16CtrlBufSize;
 			}
@@ -397,9 +384,6 @@ sint8 hif_send(uint8 u8Gid,uint8 u8Opcode,uint8 *pu8CtrlBuf,uint16 u16CtrlBufSiz
 			{
 				u32CurrAddr += (u16DataOffset - u16CtrlBufSize);
 				ret = nm_write_block(u32CurrAddr, pu8DataBuf, u16DataSize);
-			#ifdef CONF_WINC_USE_I2C	
-				nm_bsp_sleep(1);
-			#endif
 				if(M2M_SUCCESS != ret) goto ERR1;
 				u32CurrAddr += u16DataSize;
 			}
@@ -428,7 +412,9 @@ ERR1:
 	return ret;
 }
 
+#ifdef ARDUINO
 volatile uint8 hif_small_xfer = 0;
+#endif
 
 /**
 *	@fn		hif_isr
@@ -525,13 +511,13 @@ static sint8 hif_isr(void)
 						ret = M2M_ERR_BUS_FAIL;
 						goto ERR1;
 					}
-					
+#ifdef ARDUINO
 					if(hif_small_xfer)
 					{
 						/*Pause SPI transfer*/
 						return ret;
 					}
-					
+#endif
 					#ifndef ENABLE_UNO_BOARD
 					if(!gu8HifSizeDone)
 					{
@@ -571,15 +557,19 @@ ERR1:
 	return ret;
 }
 
+#ifdef ARDUINO
 void Socket_ReadSocketData_Small(void);
+#endif
 
 /**
 *	@fn		hif_handle_isr(void)
 *	@brief	Handle interrupt received from NMC1500 firmware.
 *   @return     The function SHALL return 0 for success and a negative value otherwise.
 */
+
 sint8 hif_handle_isr(void)
 {
+#ifdef ARDUINO
 	sint8 ret = M2M_SUCCESS;
 
 	if(hif_small_xfer) {
@@ -587,6 +577,7 @@ sint8 hif_handle_isr(void)
 		Socket_ReadSocketData_Small();
 		return ret;
 	}
+#endif
 
 	while (gu8Interrupt) {
 		/*must be at that place because of the race of interrupt increment and that decrement*/
@@ -595,9 +586,11 @@ sint8 hif_handle_isr(void)
 		while(1)
 		{
 			ret = hif_isr();
+#ifdef ARDUINO
 			if(hif_small_xfer) {
 				return ret;
 			}
+#endif
 			if(ret == M2M_SUCCESS) {
 				/*we will try forever untill we get that interrupt*/
 				/*Fail return errors here due to bus errors (reading expected values)*/
@@ -629,7 +622,7 @@ sint8 hif_receive(uint32 u32Addr, uint8 *pu8Buf, uint16 u16Sz, uint8 isDone)
 	uint16 size;
 	sint8 ret = M2M_SUCCESS;
 
-	if(u32Addr == 0 ||pu8Buf == NULL || u16Sz == 0)
+	if((u32Addr == 0)||(pu8Buf == NULL) || (u16Sz == 0))
 	{
 		if(isDone)
 		{
@@ -653,6 +646,7 @@ sint8 hif_receive(uint32 u32Addr, uint8 *pu8Buf, uint16 u16Sz, uint8 isDone)
 	size = (uint16)((reg >> 2) & 0xfff);
 	ret = nm_read_reg_with_ret(WIFI_HOST_RCV_CTRL_1,&address);
 	if(ret != M2M_SUCCESS)goto ERR1;
+
 
 
 	if(u16Sz > size)
