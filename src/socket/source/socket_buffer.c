@@ -226,6 +226,13 @@ void socketBufferCb(SOCKET sock, uint8 u8Msg, void *pvMsg)
 			}
 		}
 		break;
-	
+
+		case SOCKET_MSG_SENDTO:
+		{
+			sint16 *sentBytes = (sint16 *)pvMsg;
+
+			printf("SOCKET_MSG_SENDTO: sock = %d, sent bytes = %d\n", sock, *sentBytes);
+		}
+		break;
 	}
 }
