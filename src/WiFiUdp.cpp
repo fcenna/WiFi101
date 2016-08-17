@@ -70,7 +70,7 @@ uint8_t WiFiUDP::begin(uint16_t port)
 
 	// Add socket buffer handler:
 	socketBufferRegister(_socket, &_flag, &_head, &_tail, (uint8 *)_recvBuffer);
-	setsockopt(_socket, SOL_SOCKET, SO_SET_UDP_SEND_CALLBACK, &u32EnableCallbacks, 0);
+	// setsockopt(_socket, SOL_SOCKET, SO_SET_UDP_SEND_CALLBACK, &u32EnableCallbacks, 0);
 
 	// Bind socket:
 	if (bind(_socket, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0) {
