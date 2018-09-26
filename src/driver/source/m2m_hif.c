@@ -138,6 +138,12 @@ static void m2m_hif_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
 {
 
 
+#ifdef ARDUINO
+	// Silence "unused" warning
+	(void)u8OpCode;
+	(void)u16DataSize;
+	(void)u32Addr;
+#endif
 }
 /**
 *	@fn		NMI_API sint8 hif_chip_wake(void);
@@ -255,6 +261,9 @@ ERR1:
 
 sint8 hif_init(void * arg)
 {
+#ifdef ARDUINO
+	(void)arg; // Silence "unused" warning
+#endif
 	m2m_memset((uint8*)&gstrHifCxt,0,sizeof(tstrHifContext));
 	nm_bsp_register_isr(isr);
 	hif_register_cb(M2M_REQ_GROUP_HIF,m2m_hif_cb);
@@ -269,6 +278,9 @@ sint8 hif_init(void * arg)
 */
 sint8 hif_deinit(void * arg)
 {
+#ifdef ARDUINO
+	(void)arg; // Silence "unused" warning
+#endif
 	sint8 ret = M2M_SUCCESS;
 	ret = hif_chip_wake();
 	m2m_memset((uint8*)&gstrHifCxt,0,sizeof(tstrHifContext));

@@ -31,6 +31,9 @@
  * \asf_license_stop
  *
  */
+#ifdef ARDUINO
+#include <stdlib.h>
+#endif
 
 #include "driver/include/m2m_wifi.h"
 #include "driver/source/m2m_hif.h"
@@ -72,6 +75,9 @@ static uint16 	        gu16ethRcvBufSize ;
 */
 static void m2m_wifi_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
 {
+#ifdef ARDUINO
+	(void)u16DataSize; // Silence "unused" warning
+#endif
 	uint8 rx_buf[8];
 	if (u8OpCode == M2M_WIFI_RESP_CON_STATE_CHANGED)
 	{
@@ -115,7 +121,18 @@ static void m2m_wifi_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
 	else if (u8OpCode == M2M_WIFI_REQ_DHCP_CONF)
 	{
 		tstrM2MIPConfig strIpConfig;
+#ifdef ARDUINO
+		extern uint32 nmdrv_firm_ver;
+		uint16 rxSize = sizeof(tstrM2MIPConfig);
+ 		if (nmdrv_firm_ver < M2M_MAKE_VERSION(19, 5, 0)) {
+			// for backwards compatibility with firmware 19.4.4 and older,
+			// the old tstrM2MIPConfig does not contain the u32DhcpLeaseTime field
+			rxSize -= sizeof(strIpConfig.u32DhcpLeaseTime);
+		}
+ 		if (hif_receive(u32Addr, (uint8 *)&strIpConfig, rxSize, 0) == M2M_SUCCESS)
+#else
 		if (hif_receive(u32Addr, (uint8 *)&strIpConfig, sizeof(tstrM2MIPConfig), 0) == M2M_SUCCESS)
+#endif
 		{
 			if (gpfAppWifiCb)
 				gpfAppWifiCb(M2M_WIFI_REQ_DHCP_CONF, (uint8 *)&strIpConfig);
@@ -469,6 +486,13 @@ sint8 m2m_wifi_init_start(tstrWifiInitParam * pWifiInitParam)
 
 	ret = nm_get_firmware_full_info(&strtmp);
 
+#ifdef ARDUINO
+	if (M2M_ERR_FAIL == ret)
+	{
+		// for compatibility with firmware version 19.3.0
+		ret = nm_get_firmware_info(&strtmp);
+	}
+#endif
 	M2M_INFO("Firmware ver   : %u.%u.%u Svnrev %u\n", strtmp.u8FirmwareMajor, strtmp.u8FirmwareMinor, strtmp.u8FirmwarePatch,strtmp.u16FirmwareSvnNum);
 	M2M_INFO("Firmware Build %s Time %s\n",strtmp.BuildDate,strtmp.BuildTime);
 	M2M_INFO("Firmware Min driver ver : %u.%u.%u\n", strtmp.u8DriverMajor, strtmp.u8DriverMinor, strtmp.u8DriverPatch);
@@ -503,6 +527,9 @@ sint8 m2m_wifi_init(tstrWifiInitParam * pWifiInitParam)
 
 sint8  m2m_wifi_deinit(void * arg)
 {
+#ifdef ARDUINO
+	(void)arg; // Silence "unused" warning
+#endif
     gu8WifiState = WIFI_STATE_DEINIT;
 	hif_deinit(NULL);
 
@@ -518,11 +545,19 @@ void m2m_wifi_yield(void)
 
 sint8 m2m_wifi_handle_events(void * arg)
 {
+#ifdef ARDUINO
+	(void)arg; // Silence "unused" warning
+#endif
 	return hif_handle_isr();
 }
 
 sint8 m2m_wifi_delete_sc(char *pcSsid, uint8 u8SsidLen)
 {
+#ifdef ARDUINO
+	// Silence "unused" warning
+	(void)pcSsid;
+	(void)u8SsidLen;
+#endif
 	tstrM2mWifiApId	strApId;
 	m2m_memset((uint8*)&strApId, 0, sizeof(strApId));
 #if 0
@@ -1000,7 +1035,12 @@ sint8 m2m_wifi_connect_sc(char *pcSsid, uint8 u8SsidLen, uint8 u8SecType, void *
 				0,
                                                         m2m_strlen(pstr1xParams->au8UserName),
                                                         m2m_strlen(pstr1xParams->au8Passwd),
+#ifdef ARDUINO
+                                                        false,
                                                         false};
+#else
+                                                        false};
+#endif
 
             s8Ret = m2m_wifi_connect_1x_mschap2(enuCredStoreOption, &strNetworkId, &strAuth1xMschap2);
 		}
@@ -1044,6 +1084,9 @@ sint8 m2m_wifi_request_dhcp_client(void)
 
 sint8 m2m_wifi_request_dhcp_server(uint8* addr)
 {
+#ifdef ARDUINO
+	(void)addr; // Silence "unused" warning
+#endif
     /*legacy API should be removed */
 	return 0;
 }
@@ -1234,6 +1277,9 @@ sint8 m2m_wifi_wps_disable(void)
 */
 sint8 m2m_wifi_req_client_ctrl(uint8 u8Cmd)
 {
+#ifdef ARDUINO
+	(void)u8Cmd; // Silence "unused" warning
+#endif
 
 	sint8 ret = M2M_SUCCESS;
 #ifdef _PS_SERVER_
@@ -1257,6 +1303,9 @@ sint8 m2m_wifi_req_client_ctrl(uint8 u8Cmd)
 */
 sint8 m2m_wifi_req_server_init(uint8 ch)
 {
+#ifdef ARDUINO
+	(void)ch; // Silence "unused" warning
+#endif
 	sint8 ret = M2M_SUCCESS;
 #ifdef _PS_SERVER_
 	tstrM2mServerInit strServer;

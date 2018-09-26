@@ -365,7 +365,11 @@ static void m2m_ip_cb(uint8 u8OpCode, uint16 u16BufferSize,uint32 u32Address)
 					/* Don't tidy up here. Application must call close().
 					*/
 					strRecvMsg.s16BufferSize	= s16RecvStatus;
+#ifdef ARDUINO
+					strRecvMsg.pu8Buffer		= 0;
+#else
 					strRecvMsg.pu8Buffer		= NULL;
+#endif
 					if(gpfAppSocketCb)
 						gpfAppSocketCb(sock,u8CallbackMsgID, &strRecvMsg);
 				}
@@ -425,7 +429,11 @@ static void m2m_ip_cb(uint8 u8OpCode, uint16 u16BufferSize,uint32 u32Address)
 		tstrPingReply	strPingReply;
 		if(hif_receive(u32Address, (uint8*)&strPingReply, sizeof(tstrPingReply), 1) == M2M_SUCCESS)
 		{
+#ifdef ARDUINO
+			gfpPingCb = (void (*)(uint32 , uint32 , uint8))(uintptr_t)strPingReply.u32CmdPrivate;
+#else
 			gfpPingCb = (void (*)(uint32 , uint32 , uint8))strPingReply.u32CmdPrivate;
+#endif
 			if(gfpPingCb != NULL)
 			{
 				gfpPingCb(strPingReply.u32IPAddr, strPingReply.u32RTT, strPingReply.u8ErrorCode);
@@ -702,6 +710,11 @@ Date
 *********************************************************************/
 sint8 accept(SOCKET sock, struct sockaddr *addr, uint8 *addrlen)
 {
+#ifdef ARDUINO
+	// Silence "unused" warning
+	(void)addr;
+	(void)addrlen;
+#endif
 	sint8	s8Ret = SOCK_ERR_INVALID_ARG;
 	
 	if(sock >= 0 && (gastrSockets[sock].bIsUsed == 1) )
@@ -772,6 +785,9 @@ Date
 *********************************************************************/
 sint16 send(SOCKET sock, void *pvSendBuffer, uint16 u16SendLength, uint16 flags)
 {
+#ifdef ARDUINO
+	(void)flags; // Silence "unused" warning
+#endif
 	sint16	s16Ret = SOCK_ERR_INVALID_ARG;
 	
 	if((sock >= 0) && (pvSendBuffer != NULL) && (u16SendLength <= SOCKET_BUFFER_MAX_LENGTH) && (gastrSockets[sock].bIsUsed == 1))
@@ -783,13 +799,6 @@ sint16 send(SOCKET sock, void *pvSendBuffer, uint16 u16SendLength, uint16 flags)
 		u8Cmd			= SOCKET_CMD_SEND;
 		u16DataOffset	= TCP_TX_PACKET_OFFSET;
 
-#ifdef ARDUINO
-		extern uint32 nmdrv_firm_ver;
-		if (nmdrv_firm_ver < M2M_MAKE_VERSION(19, 4, 0)) {
-			// firmware 19.3.0 and older only works with this specific offset
-			u16DataOffset	= SSL_TX_PACKET_OFFSET;
-		}
-#endif
 		strSend.sock			= sock;
 		strSend.u16DataSize		= NM_BSP_B_L_16(u16SendLength);
 		strSend.u16SessionID	= gastrSockets[sock].u16SessionID;
@@ -802,6 +811,13 @@ sint16 send(SOCKET sock, void *pvSendBuffer, uint16 u16SendLength, uint16 flags)
 		{
 			u8Cmd			= SOCKET_CMD_SSL_SEND;
 			u16DataOffset	= gastrSockets[sock].u16DataOffset;
+#ifdef ARDUINO
+			extern uint32 nmdrv_firm_ver;
+			if (nmdrv_firm_ver < M2M_MAKE_VERSION(19, 4, 0)) {
+				// firmware 19.3.0 and older only works with this specific offset
+				u16DataOffset	= SSL_TX_PACKET_OFFSET;
+			}
+#endif
 		}
 
 		s16Ret =  SOCKET_REQUEST(u8Cmd|M2M_REQ_DATA_PKT, (uint8*)&strSend, sizeof(tstrSendCmd), pvSendBuffer, u16SendLength, u16DataOffset);
@@ -831,6 +847,11 @@ Date
 *********************************************************************/
 sint16 sendto(SOCKET sock, void *pvSendBuffer, uint16 u16SendLength, uint16 flags, struct sockaddr *pstrDestAddr, uint8 u8AddrLen)
 {
+#ifdef ARDUINO
+	// Silence "unused" warning
+	(void)flags;
+	(void)u8AddrLen;
+#endif
 	sint16	s16Ret = SOCK_ERR_INVALID_ARG;
 	
 #ifdef ARDUINO
@@ -1285,6 +1306,14 @@ Date
 *********************************************************************/
 sint8 getsockopt(SOCKET sock, uint8 u8Level, uint8 u8OptName, const void *pvOptValue, uint8* pu8OptLen)
 {
+#ifdef ARDUINO
+	// Silence "unused" warning
+	(void)sock;
+	(void)u8Level;
+	(void)u8OptName;
+	(void)pvOptValue;
+	(void)pu8OptLen;
+#endif
 	/* TBD */
 	return M2M_SUCCESS;
 }

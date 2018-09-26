@@ -32,6 +32,11 @@
  *
  */
 
+#ifdef ARDUINO
+#include <stdint.h>
+
+uint32_t min(uint32_t, uint32_t);
+#endif
 
 
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*
@@ -69,6 +74,9 @@ FUNCTION PROTOTYPES
 */
 static void m2m_ssl_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
 {
+#ifdef ARDUINO
+	(void)u16DataSize; // Silence "unused" warning
+#endif
 	sint8 s8tmp = M2M_SUCCESS;
 	switch(u8OpCode)
 	{

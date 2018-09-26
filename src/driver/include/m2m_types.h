@@ -38,8 +38,7 @@
 #ifdef ARDUINO
 #include <stdbool.h>
 
-#undef _Static_assert
-#define _Static_assert(...)
+#define _lint
 #endif
 
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*

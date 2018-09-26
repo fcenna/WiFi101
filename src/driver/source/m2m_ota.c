@@ -81,6 +81,9 @@ FUNCTION PROTOTYPES
 */
 static void m2m_ota_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
 {
+#ifdef ARDUINO
+	(void)u16DataSize; // Silence "unused" warning
+#endif
 	sint8 s8Ret = M2M_SUCCESS;
 	if(u8OpCode == M2M_OTA_RESP_NOTIF_UPDATE_INFO)
 	{
@@ -252,6 +255,9 @@ NMI_API sint8  m2m_ota_notif_check_for_update(void)
 */
 NMI_API sint8 m2m_ota_notif_sched(uint32 u32Period)
 {
+#ifdef ARDUINO
+	(void)u32Period; // Silence "unused" warning
+#endif
 	sint8 ret = M2M_SUCCESS;
 	ret = hif_send(M2M_REQ_GROUP_OTA,M2M_OTA_REQ_NOTIF_CHECK_FOR_UPDATE,NULL,0,NULL,0,0);
 	return ret;
@@ -552,7 +558,13 @@ NMI_API sint8 m2m_ota_host_file_read_spi(uint8 u8Handler, uint8 *pu8Buff, uint32
     s8Ret = spi_flash_read(pu8Buff, u32FlashHFDStart + FLASH_SECTOR_SZ + u32Offset, u32Size);
 
     if(M2M_SUCCESS != s8Ret)
+#ifdef ARDUINO
+    {
+#endif
         M2M_ERR("Unable to read SPI Flash\n");
+#ifdef ARDUINO
+    }
+#endif
 
 EXIT:
     return s8Ret;

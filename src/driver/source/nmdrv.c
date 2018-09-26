@@ -395,6 +395,9 @@ sint8 nm_drv_init(void * arg)
 */
 sint8 nm_drv_deinit(void * arg)
 {
+#ifdef ARDUINO
+	(void)arg; // Silence "unused" warning
+#endif
 	sint8 ret;
 
 	ret = chip_deinit();
