@@ -853,12 +853,8 @@ sint16 sendto(SOCKET sock, void *pvSendBuffer, uint16 u16SendLength, uint16 flag
 	(void)u8AddrLen;
 #endif
 	sint16	s16Ret = SOCK_ERR_INVALID_ARG;
-	
-#ifdef ARDUINO
-	if((sock >= 0) && /*(pvRecvBuf != NULL) && (u16BufLen != 0) &&*/ (gastrSockets[sock].bIsUsed == 1))
-#else
+
 	if((sock >= 0) && (pvSendBuffer != NULL) && (u16SendLength <= SOCKET_BUFFER_MAX_LENGTH) && (gastrSockets[sock].bIsUsed == 1))
-#endif
 	{
 		if(gastrSockets[sock].bIsUsed)
 		{
@@ -912,8 +908,12 @@ Date
 sint16 recv(SOCKET sock, void *pvRecvBuf, uint16 u16BufLen, uint32 u32Timeoutmsec)
 {
 	sint16	s16Ret = SOCK_ERR_INVALID_ARG;
-	
+
+#ifdef ARDUINO
+	if((sock >= 0) && /*(pvRecvBuf != NULL) && (u16BufLen != 0) &&*/ (gastrSockets[sock].bIsUsed == 1))
+#else
 	if((sock >= 0) && (pvRecvBuf != NULL) && (u16BufLen != 0) && (gastrSockets[sock].bIsUsed == 1))
+#endif
 	{
 		s16Ret = SOCK_ERR_NO_ERROR;
 		gastrSockets[sock].pu8UserBuffer 		= (uint8*)pvRecvBuf;

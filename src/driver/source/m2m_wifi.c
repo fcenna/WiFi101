@@ -124,12 +124,14 @@ static void m2m_wifi_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
 #ifdef ARDUINO
 		extern uint32 nmdrv_firm_ver;
 		uint16 rxSize = sizeof(tstrM2MIPConfig);
- 		if (nmdrv_firm_ver < M2M_MAKE_VERSION(19, 5, 0)) {
+
+		if (nmdrv_firm_ver < M2M_MAKE_VERSION(19, 5, 0)) {
 			// for backwards compatibility with firmware 19.4.4 and older,
 			// the old tstrM2MIPConfig does not contain the u32DhcpLeaseTime field
 			rxSize -= sizeof(strIpConfig.u32DhcpLeaseTime);
 		}
- 		if (hif_receive(u32Addr, (uint8 *)&strIpConfig, rxSize, 0) == M2M_SUCCESS)
+
+		if (hif_receive(u32Addr, (uint8 *)&strIpConfig, rxSize, 0) == M2M_SUCCESS)
 #else
 		if (hif_receive(u32Addr, (uint8 *)&strIpConfig, sizeof(tstrM2MIPConfig), 0) == M2M_SUCCESS)
 #endif
