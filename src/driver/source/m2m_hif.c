@@ -4,36 +4,29 @@
  *
  * \brief This module contains M2M host interface APIs implementation.
  *
- * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2016-2018 Microchip Technology Inc. and its subsidiaries.
  *
  * \asf_license_start
  *
  * \page License
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * Subject to your compliance with these terms, you may use Microchip
+ * software and any derivatives exclusively with Microchip products.
+ * It is your responsibility to comply with third party license terms applicable
+ * to your use of third party software (including open source software) that
+ * may accompany Microchip software.
  *
- * 1. Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *
- * 3. The name of Atmel may not be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY ATMEL "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT ARE
- * EXPRESSLY AND SPECIFICALLY DISCLAIMED. IN NO EVENT SHALL ATMEL BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS SUPPLIED BY MICROCHIP "AS IS". NO WARRANTIES,
+ * WHETHER EXPRESS, IMPLIED OR STATUTORY, APPLY TO THIS SOFTWARE,
+ * INCLUDING ANY IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY,
+ * AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT WILL MICROCHIP BE
+ * LIABLE FOR ANY INDIRECT, SPECIAL, PUNITIVE, INCIDENTAL OR CONSEQUENTIAL
+ * LOSS, DAMAGE, COST OR EXPENSE OF ANY KIND WHATSOEVER RELATED TO THE
+ * SOFTWARE, HOWEVER CAUSED, EVEN IF MICROCHIP HAS BEEN ADVISED OF THE
+ * POSSIBILITY OR THE DAMAGES ARE FORESEEABLE.  TO THE FULLEST EXTENT
+ * ALLOWED BY LAW, MICROCHIP'S TOTAL LIABILITY ON ALL CLAIMS IN ANY WAY
+ * RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT OF FEES, IF ANY,
+ * THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
  *
  * \asf_license_stop
  *
@@ -71,6 +64,7 @@ typedef struct {
  	uint8 u8ChipSleep;
  	uint8 u8HifRXDone;
  	uint8 u8Interrupt;
+	uint8 u8Yield;
  	uint32 u32RxAddr;
  	uint32 u32RxSize;
 	tpfHifCallBack pfWifiCb;
@@ -83,8 +77,9 @@ typedef struct {
 }tstrHifContext;
 
 volatile tstrHifContext gstrHifCxt;
-#ifdef ARDUINO
-volatile uint8 hif_receive_blocked = 0;
+
+#ifdef ETH_MODE
+extern void os_hook_isr(void);
 #endif
 
 static void isr(void)
@@ -93,15 +88,15 @@ static void isr(void)
 #ifdef NM_LEVEL_INTERRUPT
 	nm_bsp_interrupt_ctrl(0);
 #endif
+#ifdef ETH_MODE
+	os_hook_isr();
+#endif
 }
 static sint8 hif_set_rx_done(void)
 {
 	uint32 reg;
 	sint8 ret = M2M_SUCCESS;
 
-#ifdef ARDUINO
-	hif_receive_blocked = 0;
-#endif
 	gstrHifCxt.u8HifRXDone = 0;
 #ifdef NM_EDGE_INTERRUPT
 	nm_bsp_interrupt_ctrl(1);
@@ -117,7 +112,6 @@ static sint8 hif_set_rx_done(void)
 #endif
 ERR1:
 	return ret;
-
 }
 /**
 *	@fn			static void m2m_hif_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
@@ -136,12 +130,8 @@ ERR1:
 */
 static void m2m_hif_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
 {
-#ifdef ARDUINO
-	// Silence "unused" warning
-	(void)u8OpCode;
-	(void)u16DataSize;
-	(void)u32Addr;
-#endif
+
+
 }
 /**
 *	@fn		NMI_API sint8 hif_chip_wake(void);
@@ -241,7 +231,6 @@ sint8 hif_chip_sleep(void)
 		{
 			ret = chip_sleep();
 			if(ret != M2M_SUCCESS)goto ERR1;
-
 		}
 		else
 		{
@@ -260,9 +249,6 @@ ERR1:
 
 sint8 hif_init(void * arg)
 {
-#ifdef ARDUINO
-	(void)arg; // Silence "unused" warning
-#endif
 	m2m_memset((uint8*)&gstrHifCxt,0,sizeof(tstrHifContext));
 	nm_bsp_register_isr(isr);
 	hif_register_cb(M2M_REQ_GROUP_HIF,m2m_hif_cb);
@@ -277,9 +263,6 @@ sint8 hif_init(void * arg)
 */
 sint8 hif_deinit(void * arg)
 {
-#ifdef ARDUINO
-	(void)arg; // Silence "unused" warning
-#endif
 	sint8 ret = M2M_SUCCESS;
 	ret = hif_chip_wake();
 	m2m_memset((uint8*)&gstrHifCxt,0,sizeof(tstrHifContext));
@@ -311,7 +294,7 @@ sint8 hif_send(uint8 u8Gid,uint8 u8Opcode,uint8 *pu8CtrlBuf,uint16 u16CtrlBufSiz
 			   uint8 *pu8DataBuf,uint16 u16DataSize, uint16 u16DataOffset)
 {
 	sint8		ret = M2M_ERR_SEND;
-	volatile tstrHifHdr	strHif;
+	tstrHifHdr	strHif;
 
 	strHif.u8Opcode		= u8Opcode&(~NBIT7);
 	strHif.u8Gid		= u8Gid;
@@ -324,6 +307,8 @@ sint8 hif_send(uint8 u8Gid,uint8 u8Opcode,uint8 *pu8CtrlBuf,uint16 u16CtrlBufSiz
 	{
 		strHif.u16Length += u16CtrlBufSize;
 	}
+    if (strHif.u16Length <= M2M_HIF_MAX_PACKET_SIZE)
+    {
 	ret = hif_chip_wake();
 	if(ret == M2M_SUCCESS)
 	{
@@ -415,11 +400,17 @@ sint8 hif_send(uint8 u8Gid,uint8 u8Opcode,uint8 *pu8CtrlBuf,uint16 u16CtrlBufSiz
 			ret = M2M_ERR_MEM_ALLOC;
 			goto ERR2;
 		}
-
 	}
 	else
 	{
-		M2M_ERR("(HIF)Fail to wakup the chip\n");
+            M2M_ERR("(HIF)Failed to wakeup the chip\n");
+            goto ERR2;
+        }
+	}
+	else
+	{
+        M2M_ERR("HIF message length (%d) exceeds max length (%d)\n",strHif.u16Length, M2M_HIF_MAX_PACKET_SIZE);
+        ret = M2M_ERR_SEND;
 		goto ERR2;
 	}
 	/*actual sleep ret = M2M_SUCCESS*/
@@ -432,7 +423,6 @@ ERR2:
 	/*logical error*/
 	return ret;
 }
-
 /**
 *	@fn		hif_isr
 *	@brief	Host interface interrupt service routine
@@ -444,21 +434,16 @@ ERR2:
 static sint8 hif_isr(void)
 {
 	sint8 ret = M2M_SUCCESS;
-	volatile uint32 reg;
+	uint32 reg;
 	volatile tstrHifHdr strHif;
 
-#ifdef ARDUINO
-	ret = nm_read_reg_with_ret(WIFI_HOST_RCV_CTRL_0, (uint32*)&reg);
-#else
 	ret = nm_read_reg_with_ret(WIFI_HOST_RCV_CTRL_0, &reg);
-#endif
 	if(M2M_SUCCESS == ret)
 	{
 		if(reg & 0x1)	/* New interrupt has been received */
 		{
 			uint16 size;
 
-			nm_bsp_interrupt_ctrl(0);
 			/*Clearing RX interrupt*/
 			reg &= ~NBIT0;
 			ret = nm_write_reg(WIFI_HOST_RCV_CTRL_0,reg);
@@ -474,7 +459,6 @@ static sint8 hif_isr(void)
 				if(M2M_SUCCESS != ret)
 				{
 					M2M_ERR("(hif) WIFI_HOST_RCV_CTRL_1 bus fail\n");
-					nm_bsp_interrupt_ctrl(1);
 					goto ERR1;
 				}
 				gstrHifCxt.u32RxAddr = address;
@@ -484,7 +468,6 @@ static sint8 hif_isr(void)
 				if(M2M_SUCCESS != ret)
 				{
 					M2M_ERR("(hif) address bus fail\n");
-					nm_bsp_interrupt_ctrl(1);
 					goto ERR1;
 				}
 				if(strHif.u16Length != size)
@@ -493,7 +476,6 @@ static sint8 hif_isr(void)
 					{
 						M2M_ERR("(hif) Corrupted packet Size = %u <L = %u, G = %u, OP = %02X>\n",
 							size, strHif.u16Length, strHif.u8Gid, strHif.u8Opcode);
-						nm_bsp_interrupt_ctrl(1);
 						ret = M2M_ERR_BUS_FAIL;
 						goto ERR1;
 					}
@@ -504,71 +486,42 @@ static sint8 hif_isr(void)
 					if(gstrHifCxt.pfWifiCb)
 						gstrHifCxt.pfWifiCb(strHif.u8Opcode,strHif.u16Length - M2M_HIF_HDR_OFFSET, address + M2M_HIF_HDR_OFFSET);
 					else
-#ifdef ARDUINO
-					{
-#endif
 						M2M_ERR("WIFI callback is not registered\n");
-#ifdef ARDUINO
-					}
-#endif
 				}
 				else if(M2M_REQ_GROUP_IP == strHif.u8Gid)
 				{
 					if(gstrHifCxt.pfIpCb)
 						gstrHifCxt.pfIpCb(strHif.u8Opcode,strHif.u16Length - M2M_HIF_HDR_OFFSET, address + M2M_HIF_HDR_OFFSET);
 					else
-#ifdef ARDUINO
-					{
-#endif
-						M2M_ERR("Scoket callback is not registered\n");
-#ifdef ARDUINO
-					}
-#endif
+						M2M_ERR("Socket callback is not registered\n");
 				}
 				else if(M2M_REQ_GROUP_OTA == strHif.u8Gid)
 				{
 					if(gstrHifCxt.pfOtaCb)
 						gstrHifCxt.pfOtaCb(strHif.u8Opcode,strHif.u16Length - M2M_HIF_HDR_OFFSET, address + M2M_HIF_HDR_OFFSET);
 					else
-#ifdef ARDUINO
-					{
-#endif
 						M2M_ERR("Ota callback is not registered\n");
-#ifdef ARDUINO
-					}
-#endif
 				}
 				else if(M2M_REQ_GROUP_CRYPTO == strHif.u8Gid)
 				{
 					if(gstrHifCxt.pfCryptoCb)
 						gstrHifCxt.pfCryptoCb(strHif.u8Opcode,strHif.u16Length - M2M_HIF_HDR_OFFSET, address + M2M_HIF_HDR_OFFSET);
-
 					else
-#ifdef ARDUINO
-					{
-#endif
 						M2M_ERR("Crypto callback is not registered\n");
-#ifdef ARDUINO
-					}
-#endif
 				}
 				else if(M2M_REQ_GROUP_SIGMA == strHif.u8Gid)
 				{
 					if(gstrHifCxt.pfSigmaCb)
 						gstrHifCxt.pfSigmaCb(strHif.u8Opcode,strHif.u16Length - M2M_HIF_HDR_OFFSET, address + M2M_HIF_HDR_OFFSET);
 					else
-#ifdef ARDUINO
-					{
-#endif
 						M2M_ERR("Sigma callback is not registered\n");
-#ifdef ARDUINO
-					}
-#endif
 				}
 				else if(M2M_REQ_GROUP_SSL == strHif.u8Gid)
 				{
 				    if(gstrHifCxt.pfSslCb)
 						gstrHifCxt.pfSslCb(strHif.u8Opcode,strHif.u16Length - M2M_HIF_HDR_OFFSET, address + M2M_HIF_HDR_OFFSET);
+                    else
+                        M2M_ERR("SSL callback is not registered\n");
 				}
 				else
 				{
@@ -576,12 +529,6 @@ static sint8 hif_isr(void)
 					ret = M2M_ERR_BUS_FAIL;
 					goto ERR1;
 				}
-
-#ifdef ARDUINO
-				if (hif_receive_blocked) {
-					return ret;
-				}
-#endif
 				if(gstrHifCxt.u8HifRXDone)
 				{
 					M2M_ERR("(hif) host app didn't set RX Done <%u><%X>\n", strHif.u8Gid, strHif.u8Opcode);
@@ -600,11 +547,6 @@ static sint8 hif_isr(void)
 		{
 #ifndef WIN32
 			M2M_ERR("(hif) False interrupt %lx",reg);
-#ifdef ARDUINO
-			// ignore false interrupts, since they cause infinite loops in hif_handle_isr
-#else
-			ret = M2M_ERR_FAIL;
-#endif
 			goto ERR1;
 #else
 #endif
@@ -612,12 +554,22 @@ static sint8 hif_isr(void)
 	}
 	else
 	{
-		M2M_ERR("(hif) Fail to Read interrupt reg\n");
+		M2M_ERR("(hif) Failed to Read interrupt reg\n");
 		goto ERR1;
 	}
 
 ERR1:
 	return ret;
+}
+
+/**
+*	@fn		hif_yield(void)
+*	@brief
+			Yields control from interrupt event handler.
+*/
+void hif_yield(void)
+{
+	gstrHifCxt.u8Yield = 1;
 }
 
 /**
@@ -629,31 +581,42 @@ ERR1:
 sint8 hif_handle_isr(void)
 {
 	sint8 ret = M2M_SUCCESS;	
+	
+	gstrHifCxt.u8Yield = 0;
+	while(gstrHifCxt.u8Interrupt && !gstrHifCxt.u8Yield)
+	{
+        /* Atomic decrement u8Interrupt since it takes multiple instructions to load, decrement and store,
+         * during which the ISR could fire again.
+         * If LEVEL interrupt is used instead of EDGE then the atomicity isn't needed since the interrupt
+         * is turned off in the ISR and back on again only after the interrupt has been serviced in hif_isr(). */
 
-#ifdef ARDUINO
-	if (hif_receive_blocked) {
-		return ret;
-	}
+#ifndef NM_LEVEL_INTERRUPT
+		nm_bsp_interrupt_ctrl(0);
 #endif
 
-	while (gstrHifCxt.u8Interrupt) {
-		/*must be at that place because of the race of interrupt increment and that decrement*/
-		/*when the interrupt enabled*/
 		gstrHifCxt.u8Interrupt--;
+
+#ifndef NM_LEVEL_INTERRUPT
+		nm_bsp_interrupt_ctrl(1);
+#endif
+
+		uint8 retries = 5;
 		while(1)
 		{
 			ret = hif_isr();
-#ifdef ARDUINO
-			if (hif_receive_blocked) {
-				return ret;
-			}
-#endif
 			if(ret == M2M_SUCCESS) {
-				/*we will try forever untill we get that interrupt*/
+				/*we will try forever until we get that interrupt*/
 				/*Fail return errors here due to bus errors (reading expected values)*/
 				break;
 			} else {
-				M2M_ERR("(HIF) Fail to handle interrupt %d try Again..\n",ret);
+				retries--;
+				if(!retries)
+				{
+					M2M_ERR("(HIF) Failed to handle interrupt %d, aborting due to too many retries\n", ret);
+					break;
+				}
+				else
+					M2M_ERR("(HIF) Failed to handle interrupt %d try again... (%u)\n", ret, retries);
 			}
 		}
 	}
@@ -662,7 +625,7 @@ sint8 hif_handle_isr(void)
 }
 /*
 *	@fn		hif_receive
-*	@brief	Host interface interrupt serviece routine
+*	@brief	Host interface interrupt service routine
 *	@param [in]	u32Addr
 *				Receive start address
 *	@param [out]	pu8Buf
@@ -694,13 +657,13 @@ sint8 hif_receive(uint32 u32Addr, uint8 *pu8Buf, uint16 u16Sz, uint8 isDone)
 	if(u16Sz > gstrHifCxt.u32RxSize)
 	{
 		ret = M2M_ERR_FAIL;
-		M2M_ERR("APP Requested Size is larger than the recived buffer size <%u><%lu>\n",u16Sz, gstrHifCxt.u32RxSize);
+		M2M_ERR("APP Requested Size is larger than the received buffer size <%u><%lu>\n",u16Sz, gstrHifCxt.u32RxSize);
 		goto ERR1;
 	}
 	if((u32Addr < gstrHifCxt.u32RxAddr)||((u32Addr + u16Sz)>(gstrHifCxt.u32RxAddr + gstrHifCxt.u32RxSize)))
 	{
 		ret = M2M_ERR_FAIL;
-		M2M_ERR("APP Requested Address beyond the recived buffer address and length\n");
+		M2M_ERR("APP Requested Address beyond the received buffer address and length\n");
 		goto ERR1;
 	}
 	
@@ -721,7 +684,7 @@ ERR1:
 
 /**
 *	@fn		hif_register_cb
-*	@brief	To set Callback function for every compantent Component
+*	@brief	To set Callback function for every component
 *	@param [in]	u8Grp
 *				Group to which the Callback function should be set.
 *	@param [in]	fn
