@@ -44,6 +44,11 @@
 #include "driver/source/nmspi.h"
 #endif
 
+#ifdef ARDUINO
+#define NO_HW_CHIP_EN
+uint32 nmdrv_firm_ver = 0;
+#endif
+
 /**
 *	@fn		nm_get_firmware_info(tstrM2mRev* M2mRev)
 *	@brief	Get Firmware version info
@@ -74,6 +79,9 @@ sint8 nm_get_firmware_info(tstrM2mRev* M2mRev)
 	M2mRev->u16FirmwareSvnNum = 0;
 	
 	curr_firm_ver   = M2M_MAKE_VERSION(M2mRev->u8FirmwareMajor, M2mRev->u8FirmwareMinor,M2mRev->u8FirmwarePatch);
+#ifdef ARDUINO
+	nmdrv_firm_ver  = curr_firm_ver;
+#endif
 	curr_drv_ver    = M2M_MAKE_VERSION(M2M_RELEASE_VERSION_MAJOR_NO, M2M_RELEASE_VERSION_MINOR_NO, M2M_RELEASE_VERSION_PATCH_NO);
 	min_req_drv_ver = M2M_MAKE_VERSION(M2mRev->u8DriverMajor, M2mRev->u8DriverMinor,M2mRev->u8DriverPatch);
 	if(curr_drv_ver <  min_req_drv_ver) {
@@ -119,6 +127,9 @@ sint8 nm_get_firmware_full_info(tstrM2mRev* pstrRev)
 						if(ret == M2M_SUCCESS)
 						{
 							curr_firm_ver   = M2M_MAKE_VERSION(pstrRev->u8FirmwareMajor, pstrRev->u8FirmwareMinor,pstrRev->u8FirmwarePatch);
+#ifdef ARDUINO
+							nmdrv_firm_ver  = curr_firm_ver;
+#endif
 							curr_drv_ver    = M2M_MAKE_VERSION(M2M_RELEASE_VERSION_MAJOR_NO, M2M_RELEASE_VERSION_MINOR_NO, M2M_RELEASE_VERSION_PATCH_NO);
 							min_req_drv_ver = M2M_MAKE_VERSION(pstrRev->u8DriverMajor, pstrRev->u8DriverMinor,pstrRev->u8DriverPatch);
 							if((curr_firm_ver == 0)||(min_req_drv_ver == 0)||(min_req_drv_ver == 0)){
@@ -289,6 +300,12 @@ sint8 nm_drv_init_hold(void)
 	}
 #endif
 	M2M_INFO("Chip ID %lx\n", nmi_get_chipid());
+#ifdef ARDUINO
+	if ((REV(GET_CHIPID()) & 0xff0) != REV_3A0 && (REV(GET_CHIPID()) & 0xff0) != REV_B0) {
+		ret = M2M_ERR_INVALID;
+		goto ERR2;
+	}
+#endif
 #ifdef CONF_WINC_USE_SPI
 	/* Must do this after global reset to set SPI data packet size. */
 	nm_spi_init();

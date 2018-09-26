@@ -122,7 +122,12 @@ static sint8 nmi_spi_rw(uint8 *bin,uint8* bout,uint16 sz)
 
 ********************************************/
 
+#if (defined ARDUINO_ARCH_AVR)
+#include <avr/pgmspace.h>
+static PROGMEM const uint8 crc7_syndrome_table[256] = {
+#else
 static const uint8 crc7_syndrome_table[256] = {
+#endif
 	0x00, 0x09, 0x12, 0x1b, 0x24, 0x2d, 0x36, 0x3f,
 	0x48, 0x41, 0x5a, 0x53, 0x6c, 0x65, 0x7e, 0x77,
 	0x19, 0x10, 0x0b, 0x02, 0x3d, 0x34, 0x2f, 0x26,
@@ -160,7 +165,11 @@ static const uint8 crc7_syndrome_table[256] = {
 
 static uint8 crc7_byte(uint8 crc, uint8 data)
 {
+#if (defined ARDUINO_ARCH_AVR)
+	return pgm_read_byte_near(crc7_syndrome_table + ((crc << 1) ^ data));
+#else
 	return crc7_syndrome_table[(crc << 1) ^ data];
+#endif
 }
 
 static uint8 crc7(uint8 crc, const uint8 *buffer, uint32 len)

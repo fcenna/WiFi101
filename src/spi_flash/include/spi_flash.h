@@ -106,6 +106,12 @@
 #include "driver/source/nmbus.h"
 #include "driver/source/nmasic.h"
 
+#ifdef ARDUINO
+#ifdef __cplusplus
+extern "C" {
+#endif 
+#endif
+
 #define FLASH_SECTOR_SZ						(4 * 1024UL)
 /*!<Sector Size in Flash Memory
  */
@@ -217,4 +223,9 @@ sint8 spi_flash_write(uint8* pu8Buf, uint32 u32Offset, uint32 u32Sz);
 sint8 spi_flash_erase(uint32 u32Offset, uint32 u32Sz);
  /**@}*/
 
+#ifdef ARDUINO
+#ifdef __cplusplus
+}
+#endif 
+#endif
 #endif	//__SPI_FLASH_H__

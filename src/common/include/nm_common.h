@@ -234,12 +234,14 @@ NMI_API uint8 * m2m_strstr(uint8 *pcIn, uint8 *pcStr);
  */
 NMI_API uint8 m2m_checksum(uint8* buf, int sz);
 
+#ifndef ARDUINO
 /*!
  * @ingroup     COMMONAPI
  * @fn           void (*at_sb_printf)(const char *_format, ...);
  * @brief       Chooses which function to use in order to output debug.
  */
 NMI_API void (*at_sb_printf)(const char *_format, ...);
+#endif
 #ifdef __cplusplus
 }
  #endif

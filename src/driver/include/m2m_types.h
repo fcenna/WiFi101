@@ -35,6 +35,12 @@
 #ifndef __M2M_WIFI_TYPES_H__
 #define __M2M_WIFI_TYPES_H__
 
+#ifdef ARDUINO
+#include <stdbool.h>
+
+#undef _Static_assert
+#define _Static_assert(...)
+#endif
 
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*
 INCLUDES

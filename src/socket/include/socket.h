@@ -755,7 +755,11 @@ typedef struct{
 	@ref SOCK_ERR_TIMEOUT			: Socket receive timed out. The socket connection remains open.
 */
 typedef struct{
+#ifdef ARDUINO
+	uint32					pu8Buffer;
+#else
 	uint8					*pu8Buffer;
+#endif
 	/*!<
 		Pointer to the USER buffer (passed to @ref recv and @ref recvfrom function) containing the received data chunk.
 	*/

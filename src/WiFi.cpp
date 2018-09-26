@@ -1137,7 +1137,7 @@ uint32_t WiFiClass::getTime()
 
 	_resolve = (uint32_t)&systemTime;
 
-	m2m_wifi_get_sytem_time();
+	m2m_wifi_get_system_time();
 
 	unsigned long start = millis();
 	while (_resolve != 0 && millis() - start < 5000) {

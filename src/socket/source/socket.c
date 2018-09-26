@@ -35,6 +35,9 @@
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*
 INCLUDES
 *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*/
+#ifdef ARDUINO
+#include <stdint.h>
+#endif
 
 #include "bsp/include/nm_bsp.h"
 #include "socket/include/socket.h"
@@ -134,6 +137,7 @@ Version
 Date
 		17 July 2012
 *********************************************************************/
+#ifndef ARDUINO
 NMI_API void Socket_ReadSocketData(SOCKET sock, tstrSocketRecvMsg *pstrRecv,uint8 u8SocketMsg,
 								  uint32 u32StartAddress,uint16 u16ReadCount)
 {
@@ -186,6 +190,7 @@ NMI_API void Socket_ReadSocketData(SOCKET sock, tstrSocketRecvMsg *pstrRecv,uint
 		}while(u16ReadCount != 0);
 	}
 }
+#endif
 /*********************************************************************
 Function
 		m2m_ip_cb
@@ -206,6 +211,9 @@ Version
 Date
 		17 July 2012
 *********************************************************************/
+#ifdef ARDUINO
+extern uint8 hif_receive_blocked;
+#endif
 static void m2m_ip_cb(uint8 u8OpCode, uint16 u16BufferSize,uint32 u32Address)
 {	
 	if((u8OpCode == SOCKET_CMD_BIND) || (u8OpCode == SOCKET_CMD_SSL_BIND))
@@ -320,18 +328,37 @@ static void m2m_ip_cb(uint8 u8OpCode, uint16 u16BufferSize,uint32 u32Address)
 
 			if(u16SessionID == gastrSockets[sock].u16SessionID)
 			{
+#ifdef ARDUINO
+				if((s16RecvStatus > 0) && (s16RecvStatus < (sint32)u16BufferSize))
+#else
 				if((s16RecvStatus > 0) && (s16RecvStatus < u16BufferSize))
+#endif
 				{
 					/* Skip incoming bytes until reaching the Start of Application Data. 
 					*/
 					u32Address += u16DataOffset;
 
+#ifdef ARDUINO
+					// Avoid calling Socket_ReadSocketData because it pulls all the socket data
+					// from the WINC1500 at once.
+					//
+					// Call the callback with the recv address and recv data info. Later,
+					// the data will be pulled from the address using hif_receive.
+					hif_receive_blocked = 1;
+ 					strRecvMsg.s16BufferSize = s16RecvStatus;
+					strRecvMsg.pu8Buffer = u32Address;
+					strRecvMsg.u16RemainingSize = 0;
+					if(gpfAppSocketCb) {
+						gpfAppSocketCb(sock,u8CallbackMsgID, &strRecvMsg);
+					}
+#else
 					/* Read the Application data and deliver it to the application callback in
 					the given application buffer. If the buffer is smaller than the received data,
 					the data is passed to the application in chunks according to its buffer size.
 					*/
 					u16ReadSize = (uint16)s16RecvStatus;
 					Socket_ReadSocketData(sock, &strRecvMsg, u8CallbackMsgID, u32Address, u16ReadSize);
+#endif
 				}
 				else
 				{
@@ -351,7 +378,13 @@ static void m2m_ip_cb(uint8 u8OpCode, uint16 u16BufferSize,uint32 u32Address)
 					if(hif_receive(0, NULL, 0, 1) == M2M_SUCCESS)
 						M2M_DBG("hif_receive Success\n");
 					else
+#ifdef ARDUINO
+					{
+#endif
 						M2M_DBG("hif_receive Fail\n");
+#ifdef ARDUINO
+					}
+#endif
 				}
 			}
 		}
@@ -750,6 +783,13 @@ sint16 send(SOCKET sock, void *pvSendBuffer, uint16 u16SendLength, uint16 flags)
 		u8Cmd			= SOCKET_CMD_SEND;
 		u16DataOffset	= TCP_TX_PACKET_OFFSET;
 
+#ifdef ARDUINO
+		extern uint32 nmdrv_firm_ver;
+		if (nmdrv_firm_ver < M2M_MAKE_VERSION(19, 4, 0)) {
+			// firmware 19.3.0 and older only works with this specific offset
+			u16DataOffset	= SSL_TX_PACKET_OFFSET;
+		}
+#endif
 		strSend.sock			= sock;
 		strSend.u16DataSize		= NM_BSP_B_L_16(u16SendLength);
 		strSend.u16SessionID	= gastrSockets[sock].u16SessionID;
@@ -793,7 +833,11 @@ sint16 sendto(SOCKET sock, void *pvSendBuffer, uint16 u16SendLength, uint16 flag
 {
 	sint16	s16Ret = SOCK_ERR_INVALID_ARG;
 	
+#ifdef ARDUINO
+	if((sock >= 0) && /*(pvRecvBuf != NULL) && (u16BufLen != 0) &&*/ (gastrSockets[sock].bIsUsed == 1))
+#else
 	if((sock >= 0) && (pvSendBuffer != NULL) && (u16SendLength <= SOCKET_BUFFER_MAX_LENGTH) && (gastrSockets[sock].bIsUsed == 1))
+#endif
 	{
 		if(gastrSockets[sock].bIsUsed)
 		{
@@ -946,7 +990,11 @@ Date
 sint16 recvfrom(SOCKET sock, void *pvRecvBuf, uint16 u16BufLen, uint32 u32Timeoutmsec)
 {
 	sint16	s16Ret = SOCK_ERR_NO_ERROR;
+#ifdef ARDUINO
+	if((sock >= 0) && /*(pvRecvBuf != NULL) && (u16BufLen != 0) &&*/ (gastrSockets[sock].bIsUsed == 1))
+#else
 	if((sock >= 0) && (pvRecvBuf != NULL) && (u16BufLen != 0) && (gastrSockets[sock].bIsUsed == 1))
+#endif
 	{
 		if(gastrSockets[sock].bIsUsed)
 		{
@@ -1268,7 +1316,11 @@ sint8 m2m_ping_req(uint32 u32DstIP, uint8 u8TTL, tpfPingCb fpPingCb)
 
 		strPingCmd.u16PingCount		= 1;
 		strPingCmd.u32DestIPAddr	= u32DstIP;
+#ifdef ARDUINO
+		strPingCmd.u32CmdPrivate	= (uint32)(uintptr_t)fpPingCb;
+#else
 		strPingCmd.u32CmdPrivate	= (uint32)fpPingCb;
+#endif
 		strPingCmd.u8TTL			= u8TTL;
 
 		s8Ret = SOCKET_REQUEST(SOCKET_CMD_PING, (uint8*)&strPingCmd, sizeof(tstrPingCmd), NULL, 0, 0);
